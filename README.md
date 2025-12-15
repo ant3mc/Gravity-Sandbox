@@ -1,4 +1,4 @@
-# Gravity Game (Gravity Sandbox)
+# Gravity Sandbox 
 
 An interactive simulation of gravitational interactions between planets with various physics( including unusual) and visualization settings. 
  All-in-one html file( with integrated CSS and JS). 
