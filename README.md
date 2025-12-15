@@ -52,9 +52,7 @@ An interactive simulation of gravitational interactions between planets with var
 - Data saved in browser's localStorage
 
 ## 📜 License
-The program is distributed under the **GNU AGPL-3.0-or-later** license. Full license text available:
-- In the `LICENSE` file in the archive
-- At [gnu.org/licenses/agpl-3.0.txt](https://www.gnu.org/licenses/agpl-3.0.txt)
+The program is distributed under the **GNU AGPL-3.0-or-later** license.
 
 ## 🔧 Technical Features
 - **Pure HTML/CSS/JavaScript** - no build required
