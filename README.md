@@ -5,12 +5,12 @@ An interactive simulation of gravitational interactions between planets with var
 ## 🚀 Key Features
 
 ### 🌌 Gravity Physics Models
-- **5 different gravitational interaction functions:**
-  - Exponential: e^(√r / 4)
+- **5 gravitational interaction functions, with different distance functions- f(r) :**
+  - Exponential 1: e^(√r / 4)
   - Quadratic (standard Newtonian: r²)
   - Linear (r)
   - Power (r^1.5)
-  - Exponential: e^(∛r)
+  - Exponential 2: e^(∛r)
 - **Computational optimization:** Precomputed tables for exponential functions
 - **Customizable parameters:** Gravitational constant, maximum gravitational force
 
