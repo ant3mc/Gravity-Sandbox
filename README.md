@@ -55,15 +55,7 @@ m2 x2 y2 vx2 vy2
 - `C` : central mass
 - `M` : planet mass multiplier (applied to all masses listed below)
 - For each planet: `mass x y vx vy` (mass is the base mass, before multiplier)
-
-Example:
-```
-3 2 20.000 2000000.000 1.000
-100000 120.500 -45.200 2.300 -1.100
-100000 -80.100 90.000 -1.500 2.000
-100000 10.000 10.000 0.000 0.000
-```
-
+      
 ## Installation
 
 1. Download the `gravi.html` file from the repository.
