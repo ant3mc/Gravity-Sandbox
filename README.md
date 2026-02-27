@@ -1,4 +1,4 @@
-```markdown
+
 # Gravity Sandbox
 
 Interactive unusual gravity simulation with customizable physics, planet properties, and boundaries. Place planets, set initial velocities, and watch them dance under the influence of gravity.
@@ -75,7 +75,5 @@ Copyright (c) 2026 ant3mc
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.  
 For the full license text, see the `LICENSE` file or visit [GNU AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.txt).
 
----
-
 *Enjoy the gravity!*
-```
+
