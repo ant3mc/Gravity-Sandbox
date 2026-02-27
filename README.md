@@ -43,8 +43,11 @@ Interactive unusual gravity simulation with customizable physics, planet propert
 When saving or loading a configuration (`.txt` file), the format is:
 
 N F G C M
+
 m1 x1 y1 vx1 vy1
+
 m2 x2 y2 vx2 vy2
+
 ...
 
 - `N` : number of planets (1-9)
@@ -76,4 +79,5 @@ This program is free software: you can redistribute it and/or modify it under th
 For the full license text, see the `LICENSE` file or visit [GNU AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.txt).
 
 *Enjoy the gravity!*
+
 
