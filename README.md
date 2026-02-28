@@ -1,4 +1,4 @@
-
+   
 # Gravity Sandbox
 
 Interactive unusual gravity simulation with customizable physics, planet properties, and boundaries. Place planets, set initial velocities, and watch them dance under the influence of gravity.
@@ -51,7 +51,7 @@ m2 x2 y2 vx2 vy2
 ...
 
 - `N` : number of planets (1-9)
-- `F` : gravity function type (1-6, matching the select options)
+- `F` : gravity function type (1-6)
 - `G` : gravitational constant
 - `C` : central mass
 - `M` : planet mass multiplier (applied to all masses listed below)
@@ -81,6 +81,7 @@ This program is free software: you can redistribute it and/or modify it under th
 For the full license text, see the `LICENSE` file or visit [GNU AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.txt).
 
 *Enjoy the gravity!*
+
 
 
 
