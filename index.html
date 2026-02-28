@@ -1458,6 +1458,7 @@
                 });
             }
 
+            // ================= MODIFIED: saveConfigToFile =================
             saveConfigToFile(planets) {
                 try {
                     const N = planets.length;
@@ -1466,10 +1467,17 @@
                     const C = parseFloat(document.getElementById('centralMass').value);
                     const M = parseFloat(document.getElementById('planetMassMultiplier').value);
                     
-                    let content = `${N} ${F} ${G.toFixed(3)} ${C.toFixed(3)} ${M.toFixed(3)}\n`;
+                    // Get current world dimensions
+                    const ww = GravityGame.worldWidth;
+                    const wh = GravityGame.worldHeight;
+                    
+                    // Format: N F G C M worldWidth worldHeight
+                    // G with 3 decimal places, others with 1 decimal place
+                    let content = `${N} ${F} ${G.toFixed(3)} ${C.toFixed(1)} ${M.toFixed(1)} ${ww.toFixed(1)} ${wh.toFixed(1)}\n`;
                     
                     for (const planet of planets) {
-                        content += `${planet.mass.toFixed(3)} ${planet.x.toFixed(3)} ${planet.y.toFixed(3)} ${planet.vx.toFixed(3)} ${planet.vy.toFixed(3)}\n`;
+                        // mass, x, y, vx, vy with 1 decimal place
+                        content += `${planet.mass.toFixed(1)} ${planet.x.toFixed(1)} ${planet.y.toFixed(1)} ${planet.vx.toFixed(1)} ${planet.vy.toFixed(1)}\n`;
                     }
                     
                     const blob = new Blob([content], { type: 'text/plain' });
@@ -1510,6 +1518,12 @@
                             const result = this.validateConfig(text);
                             
                             if (result.valid) {
+                                // If old format, show warning
+                                if (result.oldFormat) {
+                                    alert(localization.currentLanguage === 'ru'
+                                        ? 'Внимание: файл не содержит информации об ориентации экрана. Если координаты выходят за границы, загрузка может не удаться.'
+                                        : 'Warning: file does not contain screen orientation information. If coordinates are out of bounds, loading may fail.');
+                                }
                                 resolve(result.data);
                             } else {
                                 reject(result.error);
@@ -1525,6 +1539,7 @@
                 });
             }
 
+            // ================= MODIFIED: validateConfig =================
             validateConfig(fileContent) {
                 const lines = fileContent.trim().split('\n').filter(line => line.trim() !== '');
                 
@@ -1538,12 +1553,21 @@
                 }
                 
                 const firstLine = lines[0].trim().split(/\s+/);
-                if (firstLine.length !== 5) {
+                // Check for old format (5 numbers) or new format (7 numbers)
+                let oldFormat = false;
+                let worldWidth_saved = null, worldHeight_saved = null;
+                
+                if (firstLine.length === 5) {
+                    oldFormat = true;
+                    // Old format: N F G C M
+                } else if (firstLine.length === 7) {
+                    // New format: N F G C M worldWidth worldHeight
+                } else {
                     return {
                         valid: false,
                         error: localization.currentLanguage === 'ru' 
-                            ? 'Первая строка должна содержать 5 чисел (N F G C M)' 
-                            : 'First line must contain 5 numbers (N F G C M)'
+                            ? 'Первая строка должна содержать 5 или 7 чисел' 
+                            : 'First line must contain 5 or 7 numbers'
                     };
                 }
                 
@@ -1602,6 +1626,21 @@
                     };
                 }
                 
+                // If new format, extract world dimensions and validate positivity
+                if (!oldFormat) {
+                    worldWidth_saved = parseFloat(firstLine[5]);
+                    worldHeight_saved = parseFloat(firstLine[6]);
+                    if (isNaN(worldWidth_saved) || worldWidth_saved <= 0 ||
+                        isNaN(worldHeight_saved) || worldHeight_saved <= 0) {
+                        return {
+                            valid: false,
+                            error: localization.currentLanguage === 'ru' 
+                                ? 'Некорректные размеры мира в файле' 
+                                : 'Invalid world dimensions in file'
+                        };
+                    }
+                }
+                
                 if (lines.length !== 1 + N) {
                     return {
                         valid: false,
@@ -1612,8 +1651,6 @@
                 }
                 
                 const planets = [];
-                const worldHalfW = GravityGame.worldWidth / 2;
-                const worldHalfH = GravityGame.worldHeight / 2;
                 
                 for (let i = 1; i <= N; i++) {
                     const line = lines[i].trim().split(/\s+/);
@@ -1632,19 +1669,48 @@
                     const vx = parseFloat(line[3]);
                     const vy = parseFloat(line[4]);
                     
-                    if (Math.abs(x) > worldHalfW || Math.abs(y) > worldHalfH) {
+                    planets.push({
+                        mass: m,
+                        x, y, vx, vy
+                    });
+                }
+                
+                // --- Transformation for orientation mismatch (only for new format) ---
+                if (!oldFormat) {
+                    const savedW = worldWidth_saved;
+                    const savedH = worldHeight_saved;
+                    const currentW = GravityGame.worldWidth;
+                    const currentH = GravityGame.worldHeight;
+                    
+                    const savedLandscape = savedW > savedH;
+                    const savedPortrait = savedW < savedH;
+                    const currentLandscape = currentW > currentH;
+                    const currentPortrait = currentW < currentH;
+                    
+                    // If orientations are different (one landscape, one portrait) and neither is square, swap coordinates and velocities
+                    if ((savedLandscape && currentPortrait) || (savedPortrait && currentLandscape)) {
+                        // Swap x<->y and vx<->vy for each planet
+                        for (let p of planets) {
+                            [p.x, p.y] = [p.y, p.x];
+                            [p.vx, p.vy] = [p.vy, p.vx];
+                        }
+                    }
+                }
+                
+                // --- Validate coordinates against current world bounds ---
+                const worldHalfW = GravityGame.worldWidth / 2;
+                const worldHalfH = GravityGame.worldHeight / 2;
+                
+                for (let i = 0; i < planets.length; i++) {
+                    const p = planets[i];
+                    if (Math.abs(p.x) > worldHalfW || Math.abs(p.y) > worldHalfH) {
                         return {
                             valid: false,
                             error: localization.currentLanguage === 'ru' 
-                                ? `Координаты планеты ${i} выходят за границы` 
-                                : `Planet ${i} coordinates are out of bounds`
+                                ? `Координаты планеты ${i+1} выходят за границы` 
+                                : `Planet ${i+1} coordinates are out of bounds`
                         };
                     }
-                    
-                    planets.push({
-                        mass: m * M,
-                        x, y, vx, vy
-                    });
                 }
                 
                 return {
@@ -1656,7 +1722,8 @@
                         useG: G,
                         useC: C,
                         useM: M
-                    }
+                    },
+                    oldFormat: oldFormat  // pass this flag to caller
                 };
             }
 
