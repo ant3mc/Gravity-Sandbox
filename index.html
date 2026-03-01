@@ -1338,6 +1338,9 @@
             static worldWidth = WORLD_SIZE_MAX;
             static worldHeight = WORLD_SIZE_MAX;
             
+            // === НОВАЯ КОНСТАНТА: коэффициент перевода длины вектора в скорость ===
+            static VELOCITY_SCALE = 2;   // было 3, теперь 2
+            
             constructor() {
                 this.canvas = document.getElementById('gameCanvas');
                 this.ctx = this.canvas.getContext('2d');
@@ -2461,8 +2464,9 @@
                     this.settings.planetColors[this.manualModeData.currentPlanetIndex],
                     this.settings.planetMasses[this.manualModeData.currentPlanetIndex]
                 );
-                planet.vx = dx / 3;
-                planet.vy = dy / 3;
+                // === ИСПОЛЬЗУЕМ КОНСТАНТУ VELOCITY_SCALE ===
+                planet.vx = dx / GravityGame.VELOCITY_SCALE;
+                planet.vy = dy / GravityGame.VELOCITY_SCALE;
                 this.planets.push(planet);
                 this.manualArrows.push({
                     start: {x: this.manualModeData.startPos.x, y: this.manualModeData.startPos.y},
@@ -2535,8 +2539,9 @@
                     this.settings.planetColors[this.manualModeData.currentPlanetIndex],
                     this.settings.planetMasses[this.manualModeData.currentPlanetIndex]
                 );
-                planet.vx = dx / 3;
-                planet.vy = dy / 3;
+                // === ИСПОЛЬЗУЕМ КОНСТАНТУ VELOCITY_SCALE ===
+                planet.vx = dx / GravityGame.VELOCITY_SCALE;
+                planet.vy = dy / GravityGame.VELOCITY_SCALE;
                 this.planets.push(planet);
                 this.manualArrows.push({
                     start: {x: this.manualModeData.startPos.x, y: this.manualModeData.startPos.y},
@@ -2621,8 +2626,9 @@
                     this.settings.planetColors[this.manualModeData.currentPlanetIndex],
                     this.settings.planetMasses[this.manualModeData.currentPlanetIndex]
                 );
-                planet.vx = dx / 3;
-                planet.vy = dy / 3;
+                // === ИСПОЛЬЗУЕМ КОНСТАНТУ VELOCITY_SCALE ===
+                planet.vx = dx / GravityGame.VELOCITY_SCALE;
+                planet.vy = dy / GravityGame.VELOCITY_SCALE;
 
                 this.planets.push(planet);
                 this.manualArrows.push({
