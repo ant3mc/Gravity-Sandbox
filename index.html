@@ -1405,6 +1405,15 @@
                 this.setupRealTimeTouchControls();
             }
             
+            // ========== НОВЫЙ МЕТОД ДЛЯ ЗАПРОСА ПОЛНОЭКРАННОГО РЕЖИМА ==========
+            requestFullscreen() {
+                if (this.canvas.requestFullscreen) {
+                    this.canvas.requestFullscreen().catch(err => console.warn('Fullscreen request failed:', err));
+                } else if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(err => console.warn('Fullscreen request failed:', err));
+                }
+            }
+            
             initExponentialTables() {
                 const funcType = parseInt(this.settings.gravityFunctionType);
                 const useTable = this.settings.usePrecomputedTable;
@@ -1501,6 +1510,7 @@
                 }
             }
 
+            // ================= MODIFIED: loadConfigFromFile (добавлен вызов requestFullscreen) =================
             async loadConfigFromFile() {
                 return new Promise((resolve, reject) => {
                     const input = document.createElement('input');
@@ -1521,6 +1531,9 @@
                             const result = this.validateConfig(text);
                             
                             if (result.valid) {
+                                // УСПЕШНАЯ ВАЛИДАЦИЯ → запрашиваем полноэкранный режим (действие пользователя)
+                                this.requestFullscreen();
+                                
                                 // If old format, show warning
                                 if (result.oldFormat) {
                                     alert(localization.currentLanguage === 'ru'
@@ -3478,23 +3491,22 @@
         
         const game = new GravityGame();
         
+        // ========== ИСПРАВЛЕННЫЙ ОБРАБОТЧИК КНОПКИ "НАЧАТЬ ИГРУ" ==========
         document.getElementById('startButton').addEventListener('click', async function() {
             settingsManager.save(settingsManager.getCurrentUISettings());
             
             const startMode = document.getElementById('startMode').value;
             const errorDiv = document.getElementById('error');
             errorDiv.textContent = '';
-            
+
+            // ----- РЕЖИМ ЗАГРУЗКИ ИЗ ФАЙЛА -----
             if (startMode === 'load_txt') {
                 try {
-                    const config = await game.loadConfigFromFile();
-                    
+                    const config = await game.loadConfigFromFile(); // внутри уже вызывается requestFullscreen при успехе
+                    // Применяем настройки из файла
                     const colors = settingsManager.getPlanetColorsFromUI().slice(0, config.N);
                     const masses = settingsManager.getPlanetMassesFromUI().slice(0, config.N);
                     const adjustedMasses = masses.map(m => m * config.useM);
-                    
-                    const planetCountSelect = document.getElementById('planetCount');
-                    config.N = parseInt(config.N);
                     
                     game.planets = [];
                     game.frameCount = 0;
@@ -3544,11 +3556,13 @@
                     game.render();
                     requestAnimationFrame(game.boundGameLoop);
                 } catch (error) {
-                    errorDiv.textContent = error;
+                    errorDiv.textContent = error; // ошибка показывается в меню, fullscreen не вызывался
                 }
                 return;
             }
-            
+
+            // ----- ДРУГИЕ РЕЖИМЫ (СЛУЧАЙНЫЙ / РУЧНОЙ) -----
+            // Проверки входных параметров (полностью копируем из исходного кода)
             const gravityFunctionType = document.getElementById('gravityFunctionType').value;
             const usePrecomputedTable = document.getElementById('usePrecomputedTable').checked;
             const gravityConstant = parseFloat(document.getElementById('gravityConstant').value);
@@ -3611,6 +3625,9 @@
                 return;
             }
             
+            // Все проверки пройдены – теперь можно запросить полноэкранный режим
+            game.requestFullscreen();
+            
             game.settings = {
                 gravityFunctionType, usePrecomputedTable, gravityConstant, planetCount, boundaryType, collisionType,
                 centralMass, planetRadius, maxGravitationalForce, startMode,
@@ -3630,16 +3647,6 @@
                 game.generateManualPositions();
             }
         });
-        
-        function enterFullscreen() {
-            const elem = document.documentElement;
-            if (elem.requestFullscreen) elem.requestFullscreen().catch(() => {});
-            else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
-            else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
-        }
-        
-        window.addEventListener('load', () => setTimeout(enterFullscreen, 1000));
-        ['touchstart', 'click'].forEach(e => document.addEventListener(e, enterFullscreen, {once: true}));
         
         document.addEventListener('DOMContentLoaded', () => {
             localization.initMenuUI();
