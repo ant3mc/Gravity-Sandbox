@@ -1405,6 +1405,15 @@
                 this.setupRealTimeTouchControls();
             }
             
+            // ========== НОВЫЙ МЕТОД ДЛЯ ЗАПРОСА ПОЛНОЭКРАННОГО РЕЖИМА ==========
+            requestFullscreen() {
+                if (this.canvas.requestFullscreen) {
+                    this.canvas.requestFullscreen().catch(err => console.warn('Fullscreen request failed:', err));
+                } else if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(err => console.warn('Fullscreen request failed:', err));
+                }
+            }
+            
             initExponentialTables() {
                 const funcType = parseInt(this.settings.gravityFunctionType);
                 const useTable = this.settings.usePrecomputedTable;
@@ -1501,6 +1510,7 @@
                 }
             }
 
+            // ================= MODIFIED: loadConfigFromFile (убрано предупреждение) =================
             async loadConfigFromFile() {
                 return new Promise((resolve, reject) => {
                     const input = document.createElement('input');
@@ -1521,12 +1531,9 @@
                             const result = this.validateConfig(text);
                             
                             if (result.valid) {
-                                // If old format, show warning
-                                if (result.oldFormat) {
-                                    alert(localization.currentLanguage === 'ru'
-                                        ? 'Внимание: файл не содержит информации об ориентации экрана. Если координаты выходят за границы, загрузка может не удаться.'
-                                        : 'Warning: file does not contain screen orientation information. If coordinates are out of bounds, loading may fail.');
-                                }
+                                // УСПЕШНАЯ ВАЛИДАЦИЯ → запрашиваем полноэкранный режим (действие пользователя)
+                                this.requestFullscreen();
+                                
                                 resolve(result.data);
                             } else {
                                 reject(result.error);
@@ -1542,7 +1549,7 @@
                 });
             }
 
-            // ================= MODIFIED: validateConfig =================
+            // ================= MODIFIED: validateConfig (только 7 чисел) =================
             validateConfig(fileContent) {
                 const lines = fileContent.trim().split('\n').filter(line => line.trim() !== '');
                 
@@ -1556,21 +1563,13 @@
                 }
                 
                 const firstLine = lines[0].trim().split(/\s+/);
-                // Check for old format (5 numbers) or new format (7 numbers)
-                let oldFormat = false;
-                let worldWidth_saved = null, worldHeight_saved = null;
-                
-                if (firstLine.length === 5) {
-                    oldFormat = true;
-                    // Old format: N F G C M
-                } else if (firstLine.length === 7) {
-                    // New format: N F G C M worldWidth worldHeight
-                } else {
+                // New format: N F G C M worldWidth worldHeight (7 numbers)
+                if (firstLine.length !== 7) {
                     return {
                         valid: false,
                         error: localization.currentLanguage === 'ru' 
-                            ? 'Первая строка должна содержать 5 или 7 чисел' 
-                            : 'First line must contain 5 or 7 numbers'
+                            ? 'Первая строка должна содержать 7 чисел' 
+                            : 'First line must contain 7 numbers'
                     };
                 }
                 
@@ -1579,6 +1578,8 @@
                 const G = parseFloat(firstLine[2]);
                 const C = parseFloat(firstLine[3]);
                 const M = parseFloat(firstLine[4]);
+                const worldWidth_saved = parseFloat(firstLine[5]);
+                const worldHeight_saved = parseFloat(firstLine[6]);
                 
                 if (isNaN(N) || N < 1 || N > 9) {
                     return {
@@ -1629,19 +1630,15 @@
                     };
                 }
                 
-                // If new format, extract world dimensions and validate positivity
-                if (!oldFormat) {
-                    worldWidth_saved = parseFloat(firstLine[5]);
-                    worldHeight_saved = parseFloat(firstLine[6]);
-                    if (isNaN(worldWidth_saved) || worldWidth_saved <= 0 ||
-                        isNaN(worldHeight_saved) || worldHeight_saved <= 0) {
-                        return {
-                            valid: false,
-                            error: localization.currentLanguage === 'ru' 
-                                ? 'Некорректные размеры мира в файле' 
-                                : 'Invalid world dimensions in file'
-                        };
-                    }
+                // Validate world dimensions
+                if (isNaN(worldWidth_saved) || worldWidth_saved <= 0 ||
+                    isNaN(worldHeight_saved) || worldHeight_saved <= 0) {
+                    return {
+                        valid: false,
+                        error: localization.currentLanguage === 'ru' 
+                            ? 'Некорректные размеры мира в файле' 
+                            : 'Invalid world dimensions in file'
+                    };
                 }
                 
                 if (lines.length !== 1 + N) {
@@ -1679,24 +1676,22 @@
                 }
                 
                 // --- Transformation for orientation mismatch (only for new format) ---
-                if (!oldFormat) {
-                    const savedW = worldWidth_saved;
-                    const savedH = worldHeight_saved;
-                    const currentW = GravityGame.worldWidth;
-                    const currentH = GravityGame.worldHeight;
-                    
-                    const savedLandscape = savedW > savedH;
-                    const savedPortrait = savedW < savedH;
-                    const currentLandscape = currentW > currentH;
-                    const currentPortrait = currentW < currentH;
-                    
-                    // If orientations are different (one landscape, one portrait) and neither is square, swap coordinates and velocities
-                    if ((savedLandscape && currentPortrait) || (savedPortrait && currentLandscape)) {
-                        // Swap x<->y and vx<->vy for each planet
-                        for (let p of planets) {
-                            [p.x, p.y] = [p.y, p.x];
-                            [p.vx, p.vy] = [p.vy, p.vx];
-                        }
+                const savedW = worldWidth_saved;
+                const savedH = worldHeight_saved;
+                const currentW = GravityGame.worldWidth;
+                const currentH = GravityGame.worldHeight;
+                
+                const savedLandscape = savedW > savedH;
+                const savedPortrait = savedW < savedH;
+                const currentLandscape = currentW > currentH;
+                const currentPortrait = currentW < currentH;
+                
+                // If orientations are different (one landscape, one portrait) and neither is square, swap coordinates and velocities
+                if ((savedLandscape && currentPortrait) || (savedPortrait && currentLandscape)) {
+                    // Swap x<->y and vx<->vy for each planet
+                    for (let p of planets) {
+                        [p.x, p.y] = [p.y, p.x];
+                        [p.vx, p.vy] = [p.vy, p.vx];
                     }
                 }
                 
@@ -1725,8 +1720,7 @@
                         useG: G,
                         useC: C,
                         useM: M
-                    },
-                    oldFormat: oldFormat  // pass this flag to caller
+                    }
                 };
             }
 
@@ -3478,23 +3472,22 @@
         
         const game = new GravityGame();
         
+        // ========== ИСПРАВЛЕННЫЙ ОБРАБОТЧИК КНОПКИ "НАЧАТЬ ИГРУ" ==========
         document.getElementById('startButton').addEventListener('click', async function() {
             settingsManager.save(settingsManager.getCurrentUISettings());
             
             const startMode = document.getElementById('startMode').value;
             const errorDiv = document.getElementById('error');
             errorDiv.textContent = '';
-            
+
+            // ----- РЕЖИМ ЗАГРУЗКИ ИЗ ФАЙЛА -----
             if (startMode === 'load_txt') {
                 try {
-                    const config = await game.loadConfigFromFile();
-                    
+                    const config = await game.loadConfigFromFile(); // внутри уже вызывается requestFullscreen при успехе
+                    // Применяем настройки из файла
                     const colors = settingsManager.getPlanetColorsFromUI().slice(0, config.N);
                     const masses = settingsManager.getPlanetMassesFromUI().slice(0, config.N);
                     const adjustedMasses = masses.map(m => m * config.useM);
-                    
-                    const planetCountSelect = document.getElementById('planetCount');
-                    config.N = parseInt(config.N);
                     
                     game.planets = [];
                     game.frameCount = 0;
@@ -3544,11 +3537,13 @@
                     game.render();
                     requestAnimationFrame(game.boundGameLoop);
                 } catch (error) {
-                    errorDiv.textContent = error;
+                    errorDiv.textContent = error; // ошибка показывается в меню, fullscreen не вызывался
                 }
                 return;
             }
-            
+
+            // ----- ДРУГИЕ РЕЖИМЫ (СЛУЧАЙНЫЙ / РУЧНОЙ) -----
+            // Проверки входных параметров (полностью копируем из исходного кода)
             const gravityFunctionType = document.getElementById('gravityFunctionType').value;
             const usePrecomputedTable = document.getElementById('usePrecomputedTable').checked;
             const gravityConstant = parseFloat(document.getElementById('gravityConstant').value);
@@ -3611,6 +3606,9 @@
                 return;
             }
             
+            // Все проверки пройдены – теперь можно запросить полноэкранный режим
+            game.requestFullscreen();
+            
             game.settings = {
                 gravityFunctionType, usePrecomputedTable, gravityConstant, planetCount, boundaryType, collisionType,
                 centralMass, planetRadius, maxGravitationalForce, startMode,
@@ -3630,16 +3628,6 @@
                 game.generateManualPositions();
             }
         });
-        
-        function enterFullscreen() {
-            const elem = document.documentElement;
-            if (elem.requestFullscreen) elem.requestFullscreen().catch(() => {});
-            else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
-            else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
-        }
-        
-        window.addEventListener('load', () => setTimeout(enterFullscreen, 1000));
-        ['touchstart', 'click'].forEach(e => document.addEventListener(e, enterFullscreen, {once: true}));
         
         document.addEventListener('DOMContentLoaded', () => {
             localization.initMenuUI();
