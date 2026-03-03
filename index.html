@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Гравитационная игра</title>
     <style>
+        /* все стили остаются без изменений (полностью скопированы из исходного файла) */
         * {
             margin: 0;
             padding: 0;
@@ -966,6 +967,48 @@
         const DEFAULT_PLANET_MASS = 100000;
         const MAX_PLANET_MASS = 1000000;
 
+        // === Parameter Display Component ===
+        const PARAM_DISPLAY_TIMEOUT = 1000; // ms
+
+        class ParameterDisplay {
+            constructor() {
+                this.element = document.getElementById('parameterDisplay');
+                this.nameElement = document.getElementById('parameterName');
+                this.valueElement = document.getElementById('parameterValue');
+                this.unitElement = document.getElementById('parameterUnit');
+                this.timeoutId = null;
+            }
+
+            show(name, value, unit = '') {
+                if (!this.element) return;
+                // Update text
+                this.nameElement.textContent = name;
+                this.valueElement.textContent = value;
+                this.unitElement.textContent = unit;
+                // Show panel
+                this.element.classList.add('show');
+                // Reset previous timer
+                this.cancelHide();
+                // Set new timer
+                this.timeoutId = setTimeout(() => {
+                    this.hide();
+                }, PARAM_DISPLAY_TIMEOUT);
+            }
+
+            hide() {
+                if (!this.element) return;
+                this.element.classList.remove('show');
+                this.cancelHide();
+            }
+
+            cancelHide() {
+                if (this.timeoutId) {
+                    clearTimeout(this.timeoutId);
+                    this.timeoutId = null;
+                }
+            }
+        }
+
         class SettingsManager {
             constructor() {
                 this.settingsKey = 'gravi-settings';
@@ -1367,11 +1410,8 @@
                 this.manualKeyboardHandler = null;
                 this.manualEventHandlers = null;
                 
-                this.parameterDisplay = {
-                    element: null,
-                    timeout: null,
-                    lastShown: 0
-                };
+                // Новый компонент отображения параметров
+                this.paramDisplay = new ParameterDisplay();
                 
                 this.touchControlState = {
                     active: false,
@@ -1785,13 +1825,7 @@
                     }
                 });
                 
-                document.addEventListener('keyup', (e) => {
-                    if (!this.isRunning) return;
-                    
-                    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-                        this.scheduleHideParameterDisplay();
-                    }
-                });
+                // Убран вызов scheduleHideParameterDisplay – таймер управляется внутри ParameterDisplay
             }
             
             setupRealTimeTouchControls() {
@@ -1884,7 +1918,7 @@
                         e.type === 'pointercancel' || e.type === 'mouseleave' ||
                         e.type === 'touchend') {
                         this.stopTouchControl();
-                        this.scheduleHideParameterDisplay();
+                        // Таймер скрытия управляется внутри paramDisplay, дополнительно не вызываем
                     }
                 };
                 
@@ -1922,7 +1956,6 @@
                 
                 this.canvas.addEventListener('touchend', () => {
                     this.stopTouchControl();
-                    this.scheduleHideParameterDisplay();
                 });
                 
                 this.canvas.addEventListener('contextmenu', (e) => {
@@ -1937,7 +1970,20 @@
                     case 'top': this.adjustGravityConstant('+'); break;
                     case 'bottom': this.adjustGravityConstant('-'); break;
                 }
-                this.showParameterDisplay(zone);
+                // Показываем панель с соответствующим параметром
+                if (zone === 'top' || zone === 'bottom') {
+                    this.paramDisplay.show(
+                        localization.t('gravityConstantLabel'),
+                        this.settings.gravityConstant.toFixed(3),
+                        ''
+                    );
+                } else {
+                    this.paramDisplay.show(
+                        localization.t('centralMassLabel'),
+                        this.settings.centralMass.toLocaleString(),
+                        ''
+                    );
+                }
             }
             
             startTouchRepeatTimer(zone) {
@@ -1974,6 +2020,7 @@
             }
             
             adjustGravityConstant(operation) {
+                console.log('adjustGravityConstant called, operation:', operation, 'current value:', this.settings.gravityConstant);
                 const funcType = this.settings.gravityFunctionType;
                 const step = GRAVITY_STEPS[funcType] || 1;
                 const bounds = GRAVITY_CONSTANT_BOUNDS[funcType] || [0, 100];
@@ -1991,10 +2038,16 @@
                 
                 this.settings.gravityConstant = newValue;
                 
-                this.showParameterDisplay(operation === '+' ? 'top' : 'bottom');
+                // Отображаем новое значение
+                this.paramDisplay.show(
+                    localization.t('gravityConstantLabel'),
+                    this.settings.gravityConstant.toFixed(3),
+                    ''
+                );
             }
             
             adjustCentralMass(operation) {
+                console.log('adjustCentralMass called, operation:', operation, 'current value:', this.settings.centralMass);
                 const step = this.centralMassStep;
                 const min = this.centralMassMin;
                 const max = this.centralMassMax;
@@ -2011,77 +2064,12 @@
                 
                 this.settings.centralMass = newValue;
                 
-                this.showParameterDisplay(operation === '+' ? 'right' : 'left');
-            }
-            
-            showParameterDisplay(zone) {
-                if (!this.parameterDisplay.element) {
-                    this.parameterDisplay.element = document.getElementById('parameterDisplay');
-                    this.parameterDisplay.parameterName = document.getElementById('parameterName');
-                    this.parameterDisplay.parameterValue = document.getElementById('parameterValue');
-                    this.parameterDisplay.parameterUnit = document.getElementById('parameterUnit');
-                }
-                
-                if (!this.parameterDisplay.element) return;
-                
-                if (this.parameterDisplay.timeout) {
-                    clearTimeout(this.parameterDisplay.timeout);
-                    this.parameterDisplay.timeout = null;
-                }
-                
-                let paramName, paramValue, paramUnit;
-                
-                switch(zone) {
-                    case 'top':
-                    case 'bottom':
-                        paramName = localization.currentLanguage === 'ru' ? 'Гравитационная постоянная' : 'Gravitational Constant';
-                        paramValue = this.settings.gravityConstant.toFixed(3);
-                        paramUnit = '';
-                        break;
-                    case 'left':
-                    case 'right':
-                        paramName = localization.currentLanguage === 'ru' ? 'Масса центра' : 'Central Mass';
-                        paramValue = this.settings.centralMass.toLocaleString();
-                        paramUnit = '';
-                        break;
-                    default:
-                        return;
-                }
-                
-                this.parameterDisplay.parameterName.textContent = paramName;
-                this.parameterDisplay.parameterValue.textContent = paramValue;
-                this.parameterDisplay.parameterUnit.textContent = paramUnit;
-                
-                this.parameterDisplay.element.classList.add('show');
-                this.parameterDisplay.lastShown = Date.now();
-                
-                this.parameterDisplay.timeout = setTimeout(() => {
-                    this.hideParameterDisplay();
-                }, 1000);
-            }
-            
-            scheduleHideParameterDisplay() {
-                if (!this.parameterDisplay.element) return;
-                
-                if (this.parameterDisplay.timeout) {
-                    clearTimeout(this.parameterDisplay.timeout);
-                    this.parameterDisplay.timeout = null;
-                }
-                
-                this.parameterDisplay.timeout = setTimeout(() => {
-                    this.hideParameterDisplay();
-                }, 1000);
-            }
-            
-            hideParameterDisplay() {
-                if (!this.parameterDisplay.element) return;
-                
-                this.parameterDisplay.element.classList.remove('show');
-                
-                if (this.parameterDisplay.timeout) {
-                    clearTimeout(this.parameterDisplay.timeout);
-                    this.parameterDisplay.timeout = null;
-                }
+                // Отображаем новое значение
+                this.paramDisplay.show(
+                    localization.t('centralMassLabel'),
+                    this.settings.centralMass.toLocaleString(),
+                    ''
+                );
             }
             
             worldToScreen(worldX, worldY) {
@@ -3010,7 +2998,8 @@
                 
                 this.removeManualEventListeners();
                 
-                this.hideParameterDisplay();
+                // Скрываем панель параметров
+                this.paramDisplay.hide();
                 
                 if (this.touchControlState) {
                     this.stopTouchControl();
