@@ -1362,8 +1362,6 @@
                 this.frameCount = 0;
                 this.physicsStepsPerFrame = 60;
                 this.inactivityTimer = null;
-                this.lastCanvasClickTime = 0;
-                this.exitClickDelay = 1000;
                 this.boundGameLoop = this.gameLoop.bind(this);
                 
                 this.manualKeyboardHandler = null;
@@ -1797,31 +1795,18 @@
             }
             
             setupRealTimeTouchControls() {
-                const ZONE_WIDTH_FRACTION = 1/6;
+                const THRESHOLD = 0.2; // 20% от края
                 
                 const getTouchZone = (x, y, width, height) => {
-                    const isLandscape = width >= height;
-                    const isLeft = x < width * ZONE_WIDTH_FRACTION;
-                    const isRight = x > width * (1 - ZONE_WIDTH_FRACTION);
-                    const isTop = y < height * ZONE_WIDTH_FRACTION;
-                    const isBottom = y > height * (1 - ZONE_WIDTH_FRACTION);
-                    
-                    if (isLandscape) {
-                        if (isLeft) return 'left';
-                        if (isRight) return 'right';
-                        if (isTop) return 'top';
-                        if (isBottom) return 'bottom';
-                    } else {
-                        if (isTop) return 'top';
-                        if (isBottom) return 'bottom';
-                        if (isLeft) return 'left';
-                        if (isRight) return 'right';
-                    }
+                    if (x < width * THRESHOLD) return 'left';
+                    if (x > width * (1 - THRESHOLD)) return 'right';
+                    if (y < height * THRESHOLD) return 'top';
+                    if (y > height * (1 - THRESHOLD)) return 'bottom';
                     return null;
                 };
                 
                 const isInCentralZone = (x, y, width, height) => {
-                    const margin = width * ZONE_WIDTH_FRACTION;
+                    const margin = width * THRESHOLD;
                     return x >= margin && x <= width - margin && y >= margin && y <= height - margin;
                 };
                 
@@ -1878,7 +1863,8 @@
                     const x = e.clientX - rect.left;
                     const y = e.clientY - rect.top;
                     
-                    const zone = getTouchZone(x, y, this.canvas.width, this.canvas.height);
+                    // ИСПРАВЛЕНИЕ: используем rect.width и rect.height вместо canvas.width/canvas.height
+                    const zone = getTouchZone(x, y, rect.width, rect.height);
                     
                     if (zone) {
                         e.preventDefault();
@@ -1920,7 +1906,8 @@
                         const x = touch.clientX - rect.left;
                         const y = touch.clientY - rect.top;
                         
-                        const zone = getTouchZone(x, y, this.canvas.width, this.canvas.height);
+                        // ИСПРАВЛЕНИЕ: используем rect.width и rect.height
+                        const zone = getTouchZone(x, y, rect.width, rect.height);
                         if (zone) {
                             e.preventDefault();
                             this.touchControlState.active = true;
@@ -2261,90 +2248,7 @@
                     }
                 });
                 
-                this.canvas.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    
-                    if (!this.isRunning) return;
-                    
-                    const rect = this.canvas.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-                    
-                    const ZONE_WIDTH_FRACTION = 1/6;
-                    const isLandscape = this.canvas.width >= this.canvas.height;
-                    const isLeft = x < this.canvas.width * ZONE_WIDTH_FRACTION;
-                    const isRight = x > this.canvas.width * (1 - ZONE_WIDTH_FRACTION);
-                    const isTop = y < this.canvas.height * ZONE_WIDTH_FRACTION;
-                    const isBottom = y > this.canvas.height * (1 - ZONE_WIDTH_FRACTION);
-                    
-                    let zone = null;
-                    if (isLandscape) {
-                        if (isLeft) zone = 'left';
-                        else if (isRight) zone = 'right';
-                        else if (isTop) zone = 'top';
-                        else if (isBottom) zone = 'bottom';
-                    } else {
-                        if (isTop) zone = 'top';
-                        else if (isBottom) zone = 'bottom';
-                        else if (isLeft) zone = 'left';
-                        else if (isRight) zone = 'right';
-                    }
-                    
-                    if (zone !== null) {
-                        return;
-                    }
-                    
-                    const currentTime = performance.now();
-                    if (currentTime - this.lastCanvasClickTime < this.exitClickDelay) {
-                        this.returnToSetup();
-                    } else {
-                        this.lastCanvasClickTime = currentTime;
-                    }
-                });
-                
-                let lastTouchEnd = 0;
-                this.canvas.addEventListener('touchend', (e) => {
-                    e.preventDefault();
-                    
-                    if (!this.isRunning) return;
-                    
-                    if (e.changedTouches.length === 1) {
-                        const touch = e.changedTouches[0];
-                        const rect = this.canvas.getBoundingClientRect();
-                        const x = touch.clientX - rect.left;
-                        const y = touch.clientY - rect.top;
-                        
-                        const ZONE_WIDTH_FRACTION = 1/6;
-                        const isLandscape = this.canvas.width >= this.canvas.height;
-                        const isLeft = x < this.canvas.width * ZONE_WIDTH_FRACTION;
-                        const isRight = x > this.canvas.width * (1 - ZONE_WIDTH_FRACTION);
-                        const isTop = y < this.canvas.height * ZONE_WIDTH_FRACTION;
-                        const isBottom = y > this.canvas.height * (1 - ZONE_WIDTH_FRACTION);
-                        
-                        let zone = null;
-                        if (isLandscape) {
-                            if (isLeft) zone = 'left';
-                            else if (isRight) zone = 'right';
-                            else if (isTop) zone = 'top';
-                            else if (isBottom) zone = 'bottom';
-                        } else {
-                            if (isTop) zone = 'top';
-                            else if (isBottom) zone = 'bottom';
-                            else if (isLeft) zone = 'left';
-                            else if (isRight) zone = 'right';
-                        }
-                        
-                        if (zone !== null) {
-                            return;
-                        }
-                        
-                        const currentTime = performance.now();
-                        if (currentTime - lastTouchEnd < this.exitClickDelay) {
-                            this.returnToSetup();
-                        }
-                        lastTouchEnd = currentTime;
-                    }
-                });
+                // Note: Double-click to exit is handled in setupRealTimeTouchControls
             }
             
             resizeCanvas() {
@@ -3023,6 +2927,14 @@
                 }
                 
                 const deltaTime = (currentTime - this.lastTime) / 1000;
+                // Исправлено: отрицательные значения не прерывают цикл, а сбрасывают lastTime
+                if (deltaTime < 0 || isNaN(deltaTime) || deltaTime > 1) {
+                    if (deltaTime < 0) {
+                        this.lastTime = currentTime; // сброс для восстановления нормального хода времени
+                    }
+                    requestAnimationFrame(this.boundGameLoop);
+                    return;
+                }
                 this.lastTime = currentTime;
                 
                 if (deltaTime <= 0 || isNaN(deltaTime) || deltaTime > 1) {
@@ -3116,7 +3028,6 @@
                     this.inactivityTimer = null;
                 }
                 
-                this.lastCanvasClickTime = 0;
                 this.planets = [];
                 this.ctx.fillStyle = '#000000';
                 this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
