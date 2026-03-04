@@ -3,6 +3,9 @@
 
 Interactive unusual gravity simulation with customizable physics, planet properties, and boundaries. Place planets, set initial velocities, and watch them dance under the influence of gravity.
 
+![IMG_20260227_202656](https://github.com/user-attachments/assets/d0b8608f-d09e-403f-9ee1-17b41bdd8f2e)
+
+
 ## Features
 
 - **Multiple gravity functions**: Quadratic (r²), Linear (r), Power 3/2 (r^1.5), Exponential variants (e^(√r/4), e^(∛r), e^(⁴√r)).
@@ -83,6 +86,7 @@ This program is free software: you can redistribute it and/or modify it under th
 For the full license text, see the `LICENSE` file or visit [GNU AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.txt).
 
 *Enjoy the gravity!*
+
 
 
 
