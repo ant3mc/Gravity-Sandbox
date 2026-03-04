@@ -59,6 +59,12 @@ m2 x2 y2 vx2 vy2
 - `H` : world height
 - For each planet: `mass x y vx vy` (mass is the base mass, before multiplier)
 
+## A few notes:
+
+Previously, the planets had trails, but it hindered the visual experience (in my opinion), so I got rid of them.
+
+The reason all planets are the same radius is primarily because gravity is calculated between the centers of the planets. If the radii were different, there would be problems with the physics in 'elastic collision' mode.
+
 ## Installation
 
 1. Download the `gravi.html` file from the repository.
@@ -81,6 +87,7 @@ This program is free software: you can redistribute it and/or modify it under th
 For the full license text, see the `LICENSE` file or visit [GNU AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.txt).
 
 *Enjoy the gravity!*
+
 
 
 
