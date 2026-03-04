@@ -74,12 +74,8 @@ The reason all planets are the same radius is primarily because gravity is calcu
 ## Development
 
 The game is written in pure HTML, CSS, and JavaScript (ES6) without any external libraries. All physics and UI are self-contained.
-
-To contribute or modify:
-- Clone the repository.
-- Edit the `gravi.html` file directly.
-- Test locally by opening the file in a browser.
-
+ I would especially welcome new starter txt-configs. 
+ 
 ## License
 
 Copyright (c) 2026 ant3mc  
@@ -87,6 +83,7 @@ This program is free software: you can redistribute it and/or modify it under th
 For the full license text, see the `LICENSE` file or visit [GNU AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.txt).
 
 *Enjoy the gravity!*
+
 
 
 
