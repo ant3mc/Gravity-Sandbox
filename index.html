@@ -1445,10 +1445,13 @@
             
             // ========== НОВЫЙ МЕТОД ДЛЯ ЗАПРОСА ПОЛНОЭКРАННОГО РЕЖИМА ==========
             requestFullscreen() {
-                if (this.canvas.requestFullscreen) {
-                    this.canvas.requestFullscreen().catch(err => console.warn('Fullscreen request failed:', err));
-                } else if (document.documentElement.requestFullscreen) {
+                // Исправлено: запрашиваем полноэкранный режим для всего документа,
+                // чтобы элементы с более высоким z-index (меню, панель параметров) оставались видимыми.
+                if (document.documentElement.requestFullscreen) {
                     document.documentElement.requestFullscreen().catch(err => console.warn('Fullscreen request failed:', err));
+                } else if (this.canvas.requestFullscreen) {
+                    // fallback для старых браузеров
+                    this.canvas.requestFullscreen().catch(err => console.warn('Fullscreen request failed:', err));
                 }
             }
             
