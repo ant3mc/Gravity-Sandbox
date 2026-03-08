@@ -17,7 +17,9 @@ Interactive unusual gravity simulation with customizable physics, planet propert
 - **Real-time parameter adjustment**: Use arrow keys (or touch zones) to change gravity constant and central mass during simulation.
 - **Dual-language UI**: English / Russian (switchable).
 - **Responsive design**: Works on desktop and mobile (touch-optimized).
-
+- **High-precision physics simulation**: Gravity calculation method: Velocity Verlet. Total number of gravitational substeps per second =  
+(baseSteps (10-90) × situation complexity (1–8)) × (frames per second, FPS). Maximum substeps per second( for 60 fps) = 14 400.   
+ 
 ## How to Play
 
 1. Open the game in a browser.
@@ -86,6 +88,7 @@ This program is free software: you can redistribute it and/or modify it under th
 For the full license text, see the `LICENSE` file or visit [GNU AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.txt).
 
 *Enjoy the gravity!*
+
 
 
 
