@@ -643,8 +643,8 @@
                     <legend id="collisionTypeLabel">Тип столкновения планет:</legend>
                     <select id="collisionType">
                         <option value="1">Упругое</option>
-                        <option value="2" selected>Столкновение центров</option>
-                        <option value="3">Без столкновений</option>
+                        <option value="2">Столкновение центров</option>
+                        <option value="3" selected>Без столкновений</option>
                     </select>
                 </fieldset>
                 <fieldset class="setup-group">
@@ -691,6 +691,11 @@
             <fieldset class="setup-group">
                 <legend id="maxSpeedLabel">Максимальная скорость (пикс./сек):</legend>
                 <input type="number" id="maxPlanetSpeed" min="400" max="3000" step="100" value="700">
+            </fieldset>
+            <!-- Base substeps count setting with default 60 (изменено) -->
+            <fieldset class="setup-group">
+                <legend id="baseStepsLabel">Базовое количество подшагов:</legend>
+                <input type="number" id="baseSteps" min="10" max="90" step="10" value="60">
             </fieldset>
         </div>
         <button id="backFromSettings">Назад</button>
@@ -775,7 +780,7 @@
         };
         
         // === CONSTANTS FOR ADAPTIVE STEPS BASED ON SPEED ===
-        const VERY_HIGH_SPEED = 540;      // ×8 steps
+        const VERY_HIGH_SPEED = 720;      // ×8 steps
         const HIGH_SPEED = 360;           // ×4 steps
         const MEDIUM_SPEED = 180;         // ×2 steps
         // Squares of speed thresholds (for optimization)
@@ -837,6 +842,7 @@
                 gravityConstantLabel: "Гравитационная постоянная",
                 massMultiplierLabel: "Общий множитель масс планет",
                 maxSpeedLabel: "Максимальная скорость (пикс./сек)",
+                baseStepsLabel: "Базовое количество подшагов:",   // NEW
                 settingsTitle: "Настройки",
                 planetSettingsTitle: "Индивидуальные настройки планет",
                 aboutTitle: "Гравитационная песочница v1",
@@ -907,6 +913,7 @@
                 gravityConstantLabel: "Gravitational Constant",
                 massMultiplierLabel: "Planet Mass Multiplier",
                 maxSpeedLabel: "Maximum Speed (px/sec)",
+                baseStepsLabel: "Base substeps count:",          // NEW
                 settingsTitle: "Settings",
                 planetSettingsTitle: "Individual Planet Settings",
                 aboutTitle: "Gravity Sandbox v1",
@@ -1016,7 +1023,8 @@
                     planetColors: DEFAULT_COLORS.slice(0, 9),
                     planetRadius: 40,
                     maxGravitationalForce: 100000000,
-                    maxPlanetSpeed: 700
+                    maxPlanetSpeed: 700,
+                    baseSteps: 60          // NEW: default base steps = 60 (изменено с 30)
                 };
             }
 
@@ -1039,7 +1047,8 @@
                         planetColors: settings.planetColors || this.defaultSettings.planetColors,
                         planetRadius: settings.planetRadius || this.defaultSettings.planetRadius,
                         maxGravitationalForce: settings.maxGravitationalForce || this.defaultSettings.maxGravitationalForce,
-                        maxPlanetSpeed: settings.maxPlanetSpeed || this.defaultSettings.maxPlanetSpeed
+                        maxPlanetSpeed: settings.maxPlanetSpeed || this.defaultSettings.maxPlanetSpeed,
+                        baseSteps: settings.baseSteps || this.defaultSettings.baseSteps   // NEW
                     };
                     localStorage.setItem(this.settingsKey, JSON.stringify(dataToSave));
                 } catch (e) {
@@ -1052,7 +1061,8 @@
                     planetColors: this.getPlanetColorsFromUI(),
                     planetRadius: parseFloat(document.getElementById('planetRadius').value) || 40,
                     maxGravitationalForce: parseFloat(document.getElementById('maxGravitationalForce').value) || 100000000,
-                    maxPlanetSpeed: parseFloat(document.getElementById('maxPlanetSpeed').value) || 700
+                    maxPlanetSpeed: parseFloat(document.getElementById('maxPlanetSpeed').value) || 700,
+                    baseSteps: parseInt(document.getElementById('baseSteps').value) || 60   // NEW default 60
                 };
             }
 
@@ -1088,6 +1098,7 @@
                 document.getElementById('planetRadius').value = settings.planetRadius;
                 document.getElementById('maxGravitationalForce').value = settings.maxGravitationalForce;
                 document.getElementById('maxPlanetSpeed').value = settings.maxPlanetSpeed;
+                document.getElementById('baseSteps').value = settings.baseSteps;   // NEW
 
                 for (let i = 1; i <= 9; i++) {
                     const colorSelect = document.getElementById(`color${i}`);
@@ -1153,6 +1164,7 @@
                 this.updateLabel('massMultiplierLabel', 'massMultiplierLabel');
                 this.updateLabel('maxSpeedLabel', 'maxSpeedLabel');
                 this.updateLabel('usePrecomputedTableLabel', 'usePrecomputedTableLabel');
+                this.updateLabel('baseStepsLabel', 'baseStepsLabel');   // NEW
                 this.updateSelectOptions('gravityFunctionType', 'methodOptions');
                 this.updateSelectOptions('startMode', 'startModeOptions');
                 this.updateSelectOptions('collisionType', 'collisionOptions');
@@ -1403,7 +1415,8 @@
                 this.isPaused = false;
                 this.lastTime = 0;
                 this.frameCount = 0;
-                this.physicsStepsPerFrame = 60;
+                // базовое количество подшагов в секунду будет браться из настроек (по умолчанию 60)
+                this.physicsStepsPerFrame = 60;  // временно, переопределяется в startGame
                 this.inactivityTimer = null;
                 this.boundGameLoop = this.gameLoop.bind(this);
                 
@@ -1424,8 +1437,8 @@
                     pointerId: null
                 };
                 
-                // Default value for collision type
-                this.collisionType = 2; // "Center Collision"
+                // Default value for collision type (изменено на 3)
+                this.collisionType = 3; // "No Collisions"
                 
                 // ADDED INIT: initialize manualArrows array
                 this.manualArrows = [];
@@ -2120,18 +2133,8 @@
                     this.updatePlanetCountOptions();
                 });
                 document.getElementById('usePrecomputedTable').addEventListener('change', (e) => {
+                    // Больше не ограничиваем количество планет; просто обновляем список
                     this.updatePlanetCountOptions();
-                    if (!e.target.checked) {
-                        const gravityFunctionType = document.getElementById('gravityFunctionType').value;
-                        if (gravityFunctionType === '1' || gravityFunctionType === '5' || gravityFunctionType === '6') {
-                            const planetCountSelect = document.getElementById('planetCount');
-                            const currentValue = parseInt(planetCountSelect.value);
-                            if (currentValue > 7) {
-                                planetCountSelect.value = '7';
-                                this.updatePlanetSettingsVisibility();
-                            }
-                        }
-                    }
                 });
                 const planetCountSelect = document.getElementById('planetCount');
                 planetCountSelect.addEventListener('change', () => {
@@ -2153,10 +2156,9 @@
             }
             
             updatePlanetCountOptions() {
-                const gravityFunctionType = document.getElementById('gravityFunctionType').value;
-                const usePrecomputedTable = document.getElementById('usePrecomputedTable').checked;
                 const planetCountSelect = document.getElementById('planetCount');
-                const maxPlanets = ((gravityFunctionType === '1' || gravityFunctionType === '5' || gravityFunctionType === '6') && !usePrecomputedTable) ? 7 : 9;
+                // Всегда показываем все 9 опций
+                const maxPlanets = 9;
                 const current = parseInt(planetCountSelect.value);
                 let newValue = current <= maxPlanets ? current : maxPlanets;
                 planetCountSelect.innerHTML = '';
@@ -2867,6 +2869,13 @@
                 const planetMassMultiplier = parseFloat(document.getElementById('planetMassMultiplier').value) || 1.0;
                 const adjustedMasses = masses.map(m => m * planetMassMultiplier);
                 
+                // NEW: read baseSteps (default 60)
+                const baseSteps = parseInt(document.getElementById('baseSteps').value) || 60;
+                if (baseSteps < 10 || baseSteps > 90) {
+                    document.getElementById('error').textContent = 'Base steps must be between 10 and 90';
+                    return;
+                }
+                
                 this.planets = [];
                 this.frameCount = 0;
                 
@@ -2883,12 +2892,16 @@
                     startMode,
                     planetMasses: adjustedMasses,
                     planetColors: colors,
-                    maxPlanetSpeed: parseFloat(document.getElementById('maxPlanetSpeed').value) || 700
+                    maxPlanetSpeed: parseFloat(document.getElementById('maxPlanetSpeed').value) || 700,
+                    baseSteps: baseSteps   // NEW
                 };
                 
                 this.collisionType = parseInt(this.settings.collisionType);
                 
                 this.initExponentialTables();
+                
+                // Set the base steps for physics
+                this.physicsStepsPerFrame = this.settings.baseSteps;
                 
                 if (startMode === '2') {
                     this.generateRandomPositions();
@@ -3408,7 +3421,8 @@
                         startMode: 'load_txt',
                         planetMasses: config.planets.map(p => p.mass),
                         planetColors: colors,
-                        maxPlanetSpeed: parseFloat(document.getElementById('maxPlanetSpeed').value) || 700
+                        maxPlanetSpeed: parseFloat(document.getElementById('maxPlanetSpeed').value) || 700,
+                        baseSteps: parseInt(document.getElementById('baseSteps').value) || 60   // NEW default 60
                     };
                     
                     game.updateGravityConstant();
@@ -3416,6 +3430,9 @@
                     game.collisionType = parseInt(game.settings.collisionType);
                     
                     game.initExponentialTables();
+                    
+                    // Set base steps
+                    game.physicsStepsPerFrame = game.settings.baseSteps;
                     
                     const savedSettings = settingsManager.load();
                     for (let i = 0; i < config.planets.length; i++) {
@@ -3458,6 +3475,8 @@
             const maxGravitationalForce = parseFloat(document.getElementById('maxGravitationalForce').value);
             const planetMassMultiplier = parseFloat(document.getElementById('planetMassMultiplier').value);
             const maxPlanetSpeed = parseFloat(document.getElementById('maxPlanetSpeed').value);
+            // NEW: read baseSteps (default 60)
+            const baseSteps = parseInt(document.getElementById('baseSteps').value) || 60;
             
             const F = parseInt(gravityFunctionType);
             const gValidation = game.validateGravityConstant(F, gravityConstant);
@@ -3480,6 +3499,11 @@
             }
             if (maxPlanetSpeed < 400 || maxPlanetSpeed > 3000) {
                 errorDiv.textContent = 'Maximum speed must be between 400 and 3000';
+                return;
+            }
+            // NEW: validate baseSteps
+            if (baseSteps < 10 || baseSteps > 90) {
+                errorDiv.textContent = 'Base steps must be between 10 and 90';
                 return;
             }
             
@@ -3517,11 +3541,15 @@
                 centralMass, planetRadius, maxGravitationalForce, startMode,
                 planetMasses: masses.map(m => m * planetMassMultiplier),
                 planetColors: colors,
-                maxPlanetSpeed
+                maxPlanetSpeed,
+                baseSteps   // NEW
             };
             
             game.collisionType = parseInt(collisionType);
             game.initExponentialTables();
+            
+            // Set base steps
+            game.physicsStepsPerFrame = baseSteps;
             
             if (startMode === '2') {
                 game.showScreen('');
