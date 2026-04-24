@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Гравитационная игра</title>
     <style>
-        /* все стили остаются без изменений (полностью скопированы из исходного файла) */
         * {
             margin: 0;
             padding: 0;
@@ -692,7 +691,6 @@
                 <legend id="maxSpeedLabel">Максимальная скорость (пикс./сек):</legend>
                 <input type="number" id="maxPlanetSpeed" min="400" max="3000" step="100" value="700">
             </fieldset>
-            <!-- Base substeps count setting with default 60 (изменено) -->
             <fieldset class="setup-group">
                 <legend id="baseStepsLabel">Базовое количество подшагов:</legend>
                 <input type="number" id="baseSteps" min="10" max="90" step="10" value="60">
@@ -3339,20 +3337,39 @@
                 }
             }
             
+            // ========== ОСНОВНОЙ МЕТОД ОТРИСОВКИ ==========
+            // Изменения: центральная точка теперь использует логарифмическую яркость для более плавного изменения
+            // радиус центральной точки уменьшен в 2 раза (было Math.max(5, 10 * scaleX), стало Math.max(2.5, 5 * scaleX))
             render() {
                 this.ctx.fillStyle = 'rgb(0, 0, 0)';
                 this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-                if (this.manualModeData?.isActive && this.manualModeData.mode === 'drag') {
-                    const center = this.worldToScreen(0, 0);
-                    this.ctx.fillStyle = 'white';
-                    this.ctx.beginPath();
-                    const scaleX = this.canvas.width / GravityGame.worldWidth;
-                    const dotRadius = Math.max(5, 10 * scaleX);
-                    this.ctx.arc(center.x, center.y, dotRadius, 0, Math.PI * 2);
-                    this.ctx.fill();
-                }
+                
                 const scaleX = this.canvas.width / GravityGame.worldWidth;
                 const scaleY = this.canvas.height / GravityGame.worldHeight;
+                
+                // === НОВАЯ ЛОГАРИФМИЧЕСКАЯ ЯРКОСТЬ ЦЕНТРАЛЬНОЙ ТОЧКИ ===
+                if (this.isRunning || (this.manualModeData && this.manualModeData.isActive)) {
+                    const centralMass = this.settings ? this.settings.centralMass : 0;
+                    const maxCentralMass = this.centralMassMax; // 10_000_000
+                    let brightness = 0;
+                    if (maxCentralMass > 0 && centralMass > 0) {
+                        // Используем натуральный логарифм: ln(1 + centralMass) / ln(1 + maxCentralMass)
+                        // Это даёт плавное возрастание яркости от 0 до 1, хорошо чувствительное к малым значениям
+                        brightness = Math.log1p(centralMass) / Math.log1p(maxCentralMass);
+                    }
+                    const intensity = Math.floor(255 * Math.min(1, Math.max(0, brightness)));
+                    const color = `rgb(${intensity}, ${intensity}, ${intensity})`;
+                    const center = this.worldToScreen(0, 0);
+                    // Изменение: радиус центральной точки уменьшен в 2 раза (было 10 * scaleX, стало 5 * scaleX)
+                    const dotRadius = Math.max(2.5, 5 * scaleX);
+                    this.ctx.beginPath();
+                    this.ctx.arc(center.x, center.y, dotRadius, 0, Math.PI * 2);
+                    this.ctx.fillStyle = color;
+                    this.ctx.fill();
+                }
+                // === КОНЕЦ БЛОКА ЦЕНТРАЛЬНОЙ ТОЧКИ ===
+                
+                // Отрисовка планет (без изменений)
                 const boundaryType = parseInt(this.settings.boundaryType);
                 for (let p of this.planets) {
                     if (boundaryType === 1) {
